@@ -5,15 +5,11 @@ import { IApi, IProduct, IProductListResponse, IOrder, IOrderResponse } from '..
  * Использует композицию с базовым классом Api для выполнения HTTP запросов
  */
 export class WebLarekAPI {
-    private api: IApi;
-
     /**
      * Конструктор класса
      * @param api - экземпляр класса, реализующего интерфейс IApi
      */
-    constructor(api: IApi) {
-        this.api = api;
-    }
+    constructor(private api: IApi) {}
 
     /**
      * Получить список товаров с сервера

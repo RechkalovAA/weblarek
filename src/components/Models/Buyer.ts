@@ -1,6 +1,12 @@
 import { IBuyer, TPayment } from '../../types/index';
 
 /**
+ * Тип для ошибок валидации данных покупателя
+ * Ключами могут быть только поля интерфейса IBuyer
+ */
+type TBuyerErrors = Partial<Record<keyof IBuyer, string>>;
+
+/**
  * Класс модели данных для хранения и валидации данных покупателя
  * Отвечает за хранение данных покупателя при оформлении заказа
  */
@@ -61,22 +67,22 @@ export class Buyer {
      * Поле считается валидным, если оно не пустое
      * @returns объект с ошибками валидации (пустой объект = нет ошибок)
      */
-    validate(): Record<string, string> {
-        const errors: Record<string, string> = {};
+    validate(): TBuyerErrors {
+        const errors: TBuyerErrors = {};
 
         if (!this.payment) {
             errors.payment = 'Не выбран вид оплаты';
         }
 
-        if (!this.address || this.address.trim() === '') {
+        if (!this.address?.trim()) {
             errors.address = 'Укажите адрес доставки';
         }
 
-        if (!this.email || this.email.trim() === '') {
+        if (!this.email?.trim()) {
             errors.email = 'Укажите емэйл';
         }
 
-        if (!this.phone || this.phone.trim() === '') {
+        if (!this.phone?.trim()) {
             errors.phone = 'Укажите телефон';
         }
 

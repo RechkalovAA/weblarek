@@ -33,11 +33,7 @@ export interface IProductListResponse {
 }
 
 // Данные заказа для отправки на сервер
-export interface IOrder {
-    payment: string;
-    email: string;
-    phone: string;
-    address: string;
+export interface IOrder extends IBuyer {
     total: number;
     items: string[]; // массив ID товаров
 }
