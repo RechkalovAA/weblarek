@@ -23,4 +23,9 @@ export abstract class Component<T> {
         Object.assign(this as object, data ?? {});
         return this.container;
     }
+
+    // Получить корневой DOM-элемент без изменения состояния
+    getContainer(): HTMLElement {
+        return this.container;
+    }
 }

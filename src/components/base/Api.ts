@@ -1,4 +1,4 @@
-type ApiPostMethods = 'POST' | 'PUT' | 'DELETE';
+import { ApiPostMethods } from '../../types/index';
 
 export class Api {
     readonly baseUrl: string;
@@ -15,9 +15,15 @@ export class Api {
     }
 
     protected handleResponse<T>(response: Response): Promise<T> {
-        if (response.ok) return response.json();
-        else return response.json()
-            .then(data => Promise.reject(data.error ?? response.statusText));
+        if (response.ok) {
+            return response.json().catch(() => {
+                return Promise.reject(new Error('Некорректный ответ сервера'));
+            });
+        } else {
+            return response.json()
+                .then(data => Promise.reject(data.error ?? response.statusText))
+                .catch(() => Promise.reject(new Error(response.statusText || 'Ошибка сервера')));
+        }
     }
 
     get<T extends object>(uri: string) {

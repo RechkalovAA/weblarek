@@ -1,16 +1,13 @@
-import { IBuyer, TPayment } from '../../types/index';
-
-/**
- * Тип для ошибок валидации данных покупателя
- * Ключами могут быть только поля интерфейса IBuyer
- */
-type TBuyerErrors = Partial<Record<keyof IBuyer, string>>;
+import { IBuyer, TPayment, TBuyerErrors } from '../../types/index';
+import { IEvents } from '../base/Events';
 
 /**
  * Класс модели данных для хранения и валидации данных покупателя
  * Отвечает за хранение данных покупателя при оформлении заказа
  */
 export class Buyer {
+    constructor(private readonly events?: IEvents) {}
+
     protected payment: TPayment | null = null;
     protected address: string = '';
     protected email: string = '';
@@ -37,6 +34,7 @@ export class Buyer {
                 this.phone = value as string;
                 break;
         }
+        this.events?.emit('buyer:changed', { data: this.getData() });
     }
 
     /**
@@ -60,6 +58,7 @@ export class Buyer {
         this.address = '';
         this.email = '';
         this.phone = '';
+        this.events?.emit('buyer:changed', { data: this.getData() });
     }
 
     /**

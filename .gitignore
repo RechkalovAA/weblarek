@@ -23,3 +23,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Project documentation files (not for repository)
+Описание проектной работы.md
+чек-лист.md
+Шаг 1.md
+Шаг 2.md
+Шаг 3.md
+Шаг 4.md
+Шаг 5.md

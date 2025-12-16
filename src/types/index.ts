@@ -43,3 +43,7 @@ export interface IOrderResponse {
     id: string;
     total: number;
 }
+
+// Тип для ошибок валидации данных покупателя
+// Ключами могут быть только поля интерфейса IBuyer
+export type TBuyerErrors = Partial<Record<keyof IBuyer, string>>;
