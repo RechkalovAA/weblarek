@@ -8,14 +8,14 @@ interface ModalState {
 }
 
 export class Modal extends Component<ModalState> {
-    protected content: HTMLElement;
+    protected contentElement: HTMLElement;
     protected closeButton: HTMLButtonElement;
     private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
     private isKeydownHandlerAttached: boolean = false;
 
     constructor(container: HTMLElement, private readonly events: IEvents) {
         super(container);
-        this.content = ensureElement<HTMLElement>('.modal__content', this.container);
+        this.contentElement = ensureElement<HTMLElement>('.modal__content', this.container);
         this.closeButton = ensureElement<HTMLButtonElement>('.modal__close', this.container);
 
         this.closeButton.addEventListener('click', () => this.close());
@@ -32,8 +32,12 @@ export class Modal extends Component<ModalState> {
         };
     }
 
-    set contentNode(value: HTMLElement | null) {
-        this.content.replaceChildren(value ?? '');
+    set content(value: HTMLElement | null) {
+        if (value && value.parentNode === this.contentElement) {
+            // Элемент уже является дочерним - не пересоздаем его, чтобы избежать проблем со стилями и шрифтами
+            return;
+        }
+        this.contentElement.replaceChildren(value ?? '');
     }
 
     set open(value: boolean) {
@@ -52,15 +56,5 @@ export class Modal extends Component<ModalState> {
     close() {
         this.open = false;
         this.events.emit('modal:close');
-    }
-
-    render(data?: Partial<ModalState>): HTMLElement {
-        if (data?.content !== undefined) {
-            this.contentNode = data.content;
-        }
-        if (data?.open !== undefined) {
-            this.open = data.open;
-        }
-        return super.render(data);
     }
 }

@@ -18,7 +18,7 @@ import { Header } from './components/view/Header';
 import { OrderForm } from './components/view/OrderForm';
 import { ContactsForm } from './components/view/ContactsForm';
 import { OrderSuccess } from './components/view/OrderSuccess';
-import { IProduct, IOrder } from './types/index';
+import { IProduct, IOrder, IBuyer, TBuyerErrors } from './types/index';
 
 const events = new EventEmitter();
 const api = new Api(API_URL);
@@ -39,6 +39,39 @@ const successView = new OrderSuccess(cloneTemplate<HTMLElement>('#success'), eve
 const templateCatalogCard = () => cloneTemplate<HTMLButtonElement>('#card-catalog');
 const templatePreviewCard = () => cloneTemplate<HTMLDivElement>('#card-preview');
 const templateBasketItem = () => cloneTemplate<HTMLLIElement>('#card-basket');
+
+// Вспомогательные функции для устранения дублирования кода
+
+/**
+ * Преобразует объект ошибок валидации в массив строк
+ * @param validationErrors - объект с ошибками валидации
+ * @param fields - опциональный массив полей для фильтрации (если не указан, возвращаются все ошибки)
+ * @returns массив строк с ошибками валидации
+ */
+function getValidationErrors(
+    validationErrors: TBuyerErrors,
+    fields?: (keyof IBuyer)[]
+): string[] {
+    if (fields) {
+        // Если указаны конкретные поля, проверяем только их
+        return fields
+            .map(field => validationErrors[field])
+            .filter(Boolean) as string[];
+    }
+    // Иначе возвращаем все ошибки
+    return Object.values(validationErrors).filter(Boolean) as string[];
+}
+
+/**
+ * Проверяет, открыта ли форма в модальном окне
+ * @param formSelector - CSS селектор для поиска элемента формы
+ * @returns true, если модальное окно открыто и содержит указанный элемент формы
+ */
+function isFormOpen(formSelector: string): boolean {
+    const modalContainer = document.querySelector('#modal-container');
+    return modalContainer?.classList.contains('modal_active') === true &&
+           modalContainer.querySelector(formSelector) !== null;
+}
 
 // Первичная отрисовка состояния
 renderBasket();
@@ -68,7 +101,7 @@ function renderPreview(product: IProduct) {
         ? 'Недоступно'
         : inBasket
             ? 'Удалить из корзины'
-            : 'В корзину';
+            : 'Купить';
     
     const card = new PreviewCard(events, templatePreviewCard(), {
         onClick: () => {
@@ -100,54 +133,7 @@ function renderBasket() {
     header.render({ counter: basket.getCount() });
 }
 
-function renderOrderForm() {
-    const data = buyer.getData();
-    const validationErrors = buyer.validate();
-    const errors: string[] = [];
-    if (validationErrors.payment) errors.push(validationErrors.payment);
-    if (validationErrors.address) errors.push(validationErrors.address);
-
-    const formNode = orderForm.render({
-        payment: data.payment ?? null,
-        address: data.address ?? '',
-        valid: errors.length === 0,
-        errors: errors.join('. '),
-    });
-    modal.render({ content: formNode, open: true });
-}
-
-function renderContactsForm() {
-    const data = buyer.getData();
-    const validationErrors = buyer.validate();
-    const errors: string[] = [];
-    if (validationErrors.email) errors.push(validationErrors.email);
-    if (validationErrors.phone) errors.push(validationErrors.phone);
-
-    const formNode = contactsForm.render({
-        email: data.email ?? '',
-        phone: data.phone ?? '',
-        valid: errors.length === 0,
-        errors: errors.join('. '),
-    });
-    modal.render({ content: formNode, open: true });
-}
-
-function renderSuccess(total: number) {
-    const content = successView.render({ total });
-    modal.render({ content, open: true });
-}
-
-// Модельные события
-events.on('catalog:changed', () => renderCatalog(catalog.getItems()));
-
-events.on('catalog:preview', ({ product }: { product: IProduct }) => renderPreview(product));
-
-events.on('basket:changed', () => {
-    renderBasket();
-});
-
-// События представлений
-events.on('basket:open', () => {
+function renderBasketContent(): HTMLElement {
     const items = basket.getItems().map((product, index) => {
         const item = new BasketItem(events, templateBasketItem(), {
             onRemove: () => {
@@ -162,10 +148,84 @@ events.on('basket:open', () => {
         });
     });
     const total = basket.getTotalPrice();
-    // Важно: создаём свежий view-контейнер каждый раз, чтобы избежать проблем
-    // с повторным открытием (перемещение одного и того же DOM-узла в модалку/из модалки).
     const basketView = new BasketView(cloneTemplate<HTMLElement>('#basket'), events);
-    const basketContent = basketView.render({ items, total });
+    return basketView.render({ items, total });
+}
+
+function renderOrderForm() {
+    const data = buyer.getData();
+    const validationErrors = buyer.validate();
+    const errors = getValidationErrors(validationErrors, ['payment', 'address']);
+
+    const formNode = orderForm.render({
+        payment: data.payment ?? null,
+        address: data.address ?? '',
+        valid: errors.length === 0,
+        errors: errors.join('. '),
+    });
+    modal.render({ content: formNode, open: true });
+}
+
+function renderContactsForm() {
+    const data = buyer.getData();
+    const validationErrors = buyer.validate();
+    const errors = getValidationErrors(validationErrors, ['email', 'phone']);
+
+    const formNode = contactsForm.render({
+        email: data.email ?? '',
+        phone: data.phone ?? '',
+        valid: errors.length === 0,
+        errors: errors.join('. '),
+    });
+    modal.render({ content: formNode, open: true });
+}
+
+function updateOrderFormValidation() {
+    const validationErrors = buyer.validate();
+    const errors = getValidationErrors(validationErrors, ['payment', 'address']);
+    
+    orderForm.render({
+        valid: errors.length === 0,
+        errors: errors.join('. '),
+    });
+}
+
+function updateContactsFormValidation() {
+    const validationErrors = buyer.validate();
+    const errors = getValidationErrors(validationErrors, ['email', 'phone']);
+    
+    contactsForm.render({
+        valid: errors.length === 0,
+        errors: errors.join('. '),
+    });
+}
+
+function renderSuccess(total: number) {
+    const content = successView.render({ total });
+    modal.render({ content, open: true });
+}
+
+// Модельные события
+events.on('catalog:changed', () => renderCatalog(catalog.getItems()));
+
+events.on('catalog:preview', ({ product }: { product: IProduct }) => renderPreview(product));
+
+events.on('basket:changed', () => {
+    renderBasket();
+    // Если модальное окно открыто и содержит корзину, обновляем её содержимое
+    const modalContainer = document.querySelector('#modal-container');
+    if (modalContainer?.classList.contains('modal_active')) {
+        const modalContent = modalContainer.querySelector('.modal__content');
+        if (modalContent && modalContent.querySelector('.basket')) {
+        const basketContent = renderBasketContent();
+            modal.render({ content: basketContent, open: true });
+        }
+    }
+});
+
+// События представлений
+events.on('basket:open', () => {
+    const basketContent = renderBasketContent();
     header.render({ counter: basket.getCount() });
     modal.render({ content: basketContent, open: true });
 });
@@ -183,7 +243,14 @@ events.on('order:payment', ({ payment }: { payment: string }) => {
 
 events.on('order:address', ({ address }: { address: string }) => {
     buyer.setField('address', address);
+    
+    if (isFormOpen('input[name="address"]')) {
+        // Форма уже открыта - обновляем только валидацию
+        updateOrderFormValidation();
+    } else {
+        // Форма не открыта - полная перерисовка
     renderOrderForm();
+    }
 });
 
 events.on('order:next', () => {
@@ -193,16 +260,19 @@ events.on('order:next', () => {
 events.on('order:contacts', ({ email, phone }: { email?: string; phone?: string }) => {
     if (email !== undefined) buyer.setField('email', email);
     if (phone !== undefined) buyer.setField('phone', phone);
+    
+    if (isFormOpen('input[name="email"]') || isFormOpen('input[name="phone"]')) {
+        // Форма уже открыта - обновляем только валидацию
+        updateContactsFormValidation();
+    } else {
+        // Форма не открыта - полная перерисовка
     renderContactsForm();
+    }
 });
 
 events.on('order:submit', () => {
     const validationErrors = buyer.validate();
-    const errors: string[] = [];
-    if (validationErrors.payment) errors.push(validationErrors.payment);
-    if (validationErrors.address) errors.push(validationErrors.address);
-    if (validationErrors.email) errors.push(validationErrors.email);
-    if (validationErrors.phone) errors.push(validationErrors.phone);
+    const errors = getValidationErrors(validationErrors);
     
     if (errors.length) {
         contactsForm.render({ valid: false, errors: errors.join('. ') });
