@@ -24,7 +24,7 @@ export class Basket {
      */
     addItem(product: IProduct): void {
         this.items.push(product);
-        this.events?.emit('basket:changed', { items: this.items });
+        this.events?.emit('basket:changed');
     }
 
     /**
@@ -33,7 +33,7 @@ export class Basket {
      */
     removeItem(productId: string): void {
         this.items = this.items.filter(item => item.id !== productId);
-        this.events?.emit('basket:changed', { items: this.items });
+        this.events?.emit('basket:changed');
     }
 
     /**
@@ -41,7 +41,7 @@ export class Basket {
      */
     clear(): void {
         this.items = [];
-        this.events?.emit('basket:changed', { items: this.items });
+        this.events?.emit('basket:changed');
     }
 
     /**

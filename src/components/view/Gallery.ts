@@ -12,10 +12,5 @@ export class Gallery extends Component<GalleryState> {
     set items(value: HTMLElement[]) {
         this.container.replaceChildren(...value);
     }
-
-    render(data?: Partial<GalleryState>): HTMLElement {
-        if (data?.items) this.items = data.items;
-        return this.container;
-    }
 }
 

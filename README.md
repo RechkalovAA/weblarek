@@ -56,14 +56,14 @@ Presenter - презентер содержит основную логику п
 ### Базовый код
 
 #### Класс Component
-Является базовым классом для всех компонентов интерфейса.
+Является базовым абстрактным классом для всех компонентов интерфейса.
 Класс является дженериком и принимает в переменной `T` тип данных, которые могут быть переданы в метод `render` для отображения.
 
 Конструктор:  
-`constructor(container: HTMLElement)` - принимает ссылку на DOM элемент за отображение, которого он отвечает.
+`protected constructor(protected readonly container: HTMLElement)` - защищенный конструктор абстрактного класса, принимает ссылку на DOM элемент за отображение, которого он отвечает.
 
 Поля класса:  
-`container: HTMLElement` - поле для хранения корневого DOM элемента компонента.
+`protected readonly container: HTMLElement` - защищенное поле только для чтения, хранит корневой DOM элемент компонента.
 
 Методы класса:  
 `render(data?: Partial<T>): HTMLElement` - Главный метод класса. Он принимает данные, которые необходимо отобразить в интерфейсе, записывает эти данные в поля класса и возвращает ссылку на DOM-элемент. Предполагается, что в классах, которые будут наследоваться от `Component` будут реализованы сеттеры для полей с данными, которые будут вызываться в момент вызова `render` и записывать данные в необходимые DOM элементы.  
@@ -78,8 +78,8 @@ Presenter - презентер содержит основную логику п
 `constructor(baseUrl: string, options: RequestInit = {})` - В конструктор передается базовый адрес сервера и опциональный объект с заголовками запросов.
 
 Поля класса:  
-`baseUrl: string` - базовый адрес сервера  
-`options: RequestInit` - объект с заголовками, которые будут использованы для запросов.
+`readonly baseUrl: string` - базовый адрес сервера  
+`protected options: RequestInit` - объект с заголовками, которые будут использованы для запросов.
 
 Методы:  
 `get<T extends object>(uri: string): Promise<T>` - выполняет GET запрос на переданный в параметрах ендпоинт и возвращает промис с типизированным объектом типа `T`, которым ответил сервер  
@@ -97,7 +97,8 @@ Presenter - презентер содержит основную логику п
 Методы класса:  
 `on<T extends object>(event: EventName, callback: (data: T) => void): void` - подписка на событие, принимает название события и функцию обработчик.  
 `emit<T extends object>(event: string, data?: T): void` - инициализация события. При вызове события в метод передается название события и объект с данными, который будет использован как аргумент для вызова обработчика.  
-`trigger<T extends object>(event: string, context?: Partial<T>): (data: T) => void` - возвращает функцию, при вызове которой инициализируется требуемое в параметрах событие с передачей в него данных из второго параметра.
+
+**Примечание:** Класс также содержит методы `off()`, `onAll()`, `offAll()` и `trigger()`, которые не используются в текущем проекте, но являются частью стандартного функционала брокера событий.
 
 ### Данные
 
@@ -192,12 +193,13 @@ Presenter - презентер содержит основную логику п
 
 **Поля класса:**
 - `protected items: IProduct[]` - массив всех товаров магазина
+- `protected preview: IProduct | null` - товар, выбранный для детального просмотра
 
 **Методы класса:**
-- `setItems(items: IProduct[]): void` - сохраняет массив товаров в поле `items`
+- `setItems(items: IProduct[]): void` - сохраняет массив товаров в поле `items` и генерирует событие `catalog:changed`
 - `getItems(): IProduct[]` - возвращает массив всех товаров из каталога
-- `getProductById(id: string): IProduct | undefined` - находит товар по его идентификатору, возвращает найденный товар или `undefined`
-- `setPreview(product: IProduct): void` - устанавливает товар для детального просмотра и генерирует событие `catalog:preview`
+- `setPreview(product: IProduct): void` - устанавливает товар для детального просмотра и генерирует событие `catalog:preview` (без данных, презентер запрашивает данные через `getPreview()`)
+- `getPreview(): IProduct | null` - возвращает товар, выбранный для детального просмотра, или null
 
 #### Класс Basket
 Класс модели данных для управления корзиной покупок.
@@ -288,8 +290,8 @@ Presenter - презентер содержит основную логику п
 **Поля класса:**
 - `protected contentElement: HTMLElement` - элемент для размещения контента модального окна
 - `protected closeButton: HTMLButtonElement` - кнопка закрытия модального окна
-- `private keydownHandler: ((event: KeyboardEvent) => void) | null` - обработчик нажатия клавиш
-- `private isKeydownHandlerAttached: boolean` - флаг для предотвращения множественной подписки на событие `keydown`
+- `private keydownHandler: ((event: KeyboardEvent) => void) | null = null` - обработчик нажатия клавиш
+- `private isKeydownHandlerAttached: boolean = false` - флаг для предотвращения множественной подписки на событие `keydown`
 
 **Методы класса:**
 - `set content(value: HTMLElement | null): void` - устанавливает контент модального окна, используя `replaceChildren()` для замены содержимого. При передаче `null` содержимое очищается. Если элемент уже является дочерним элементом модального окна, повторное перемещение не выполняется (для предотвращения проблем со стилями и шрифтами)
@@ -309,35 +311,23 @@ Presenter - презентер содержит основную логику п
 
 **Методы класса:**
 - `set items(value: HTMLElement[]): void` - устанавливает массив карточек товаров для отображения (использует `container` напрямую)
-- `render(data?: Partial<GalleryState>): HTMLElement` - обновляет содержимое галереи
 
 #### Класс Card
 Базовый класс для всех вариантов карточек товара.
 
-**Назначение:** Общий функционал для отображения информации о товаре (название, цена, категория, изображение).
+**Назначение:** Общий функционал для отображения информации о товаре (название и цена).
 
 **Конструктор:**  
 `constructor(events: IEvents, container: HTMLElement)` - принимает брокер событий и контейнер карточки.
 
 **Поля класса:**
-- `protected titleElement: HTMLElement` - элемент для отображения названия товара (обязательное поле)
-- `protected priceElement: HTMLElement` - элемент для отображения цены товара (обязательное поле)
-- `protected categoryElement?: HTMLElement` - элемент для отображения категории товара (опциональное)
-- `protected imageElement?: HTMLImageElement` - элемент изображения товара (опциональное)
-- `protected descriptionElement?: HTMLElement` - элемент для отображения описания товара (опциональное)
-- `protected buttonElement?: HTMLButtonElement` - кнопка действия (опциональное)
-- `protected indexElement?: HTMLElement` - элемент для отображения порядкового номера товара (опциональное, используется в корзине)
-- `protected readonly events: IEvents` - брокер событий
+- `protected titleElement: HTMLElement` - элемент для отображения названия товара
+- `protected priceElement: HTMLElement` - элемент для отображения цены товара
+- `protected readonly events: IEvents` - брокер событий (объявлен в конструкторе)
 
 **Методы класса:**
-- `set title(value: string | undefined): void` - устанавливает название товара
-- `set price(value: number | null | undefined): void` - устанавливает цену товара (формат: "N синапсов" или "Бесценно")
-- `set category(value: string | undefined): void` - устанавливает категорию товара и применяет соответствующий модификатор класса из `categoryMap`
-- `set image(src: string | undefined): void` - устанавливает изображение товара (добавляет `CDN_URL` к пути)
-- `set description(value: string | undefined): void` - устанавливает описание товара
-- `set index(value: number | undefined): void` - устанавливает порядковый номер товара
-- `set buttonText(value: string | undefined): void` - устанавливает текст кнопки
-- `set disabled(value: boolean | undefined): void` - блокирует/разблокирует кнопку
+- `set title(value: string): void` - устанавливает название товара
+- `set price(value: number | null): void` - устанавливает цену товара (формат: "N синапсов" или "Бесценно")
 
 #### Класс CatalogCard
 Класс для карточки товара в каталоге.
@@ -349,8 +339,13 @@ Presenter - презентер содержит основную логику п
 
 **Наследует:** `Card`
 
+**Поля класса:**
+- `protected categoryElement: HTMLElement` - элемент для отображения категории товара
+- `protected imageElement: HTMLImageElement` - элемент изображения товара
+
 **Методы класса:**
-- `render(data: CardState): HTMLElement` - отображает карточку товара
+- `set category(value: string): void` - устанавливает категорию товара и применяет соответствующий модификатор класса из `categoryMap`
+- `set image(src: string): void` - устанавливает изображение товара (добавляет `CDN_URL` к пути)
 
 **Обработчики действий (CatalogCardActions):**
 - `onClick?: () => void` - вызывается при клике на карточку. Обработчик передаётся через конструктор и позволяет презентеру управлять поведением при клике, не генерируя события напрямую
@@ -361,15 +356,26 @@ Presenter - презентер содержит основную логику п
 **Назначение:** Отображение полной информации о товаре с кнопкой добавления/удаления из корзины.
 
 **Конструктор:**  
-`constructor(events: IEvents, container: HTMLElement, actions?: PreviewCardActions)` - принимает брокер событий, контейнер карточки (шаблон `#card-preview`) и опциональный объект с обработчиками действий.
+`constructor(events: IEvents, container: HTMLElement)` - принимает брокер событий и контейнер карточки (шаблон `#card-preview`).
 
 **Наследует:** `Card`
 
-**Методы класса:**
-- `render(data: PreviewCardState): HTMLElement` - отображает карточку товара с кнопкой "Купить" или "Удалить из корзины" (заблокирована при `price === null`, в этом случае текст кнопки "Недоступно"). Идентификатор товара хранится в `data-*` атрибуте контейнера. Применяет класс `card__button_remove` к кнопке, если товар уже в корзине (`inBasket === true`)
+**Поля класса:**
+- `protected categoryElement: HTMLElement` - элемент для отображения категории товара
+- `protected imageElement: HTMLImageElement` - элемент изображения товара
+- `protected descriptionElement: HTMLElement` - элемент для отображения описания товара
+- `protected buttonElement: HTMLButtonElement` - кнопка действия
 
-**Обработчики действий (PreviewCardActions):**
-- `onClick?: () => void` - вызывается при клике на кнопку действия ("Купить" или "Удалить из корзины"). Обработчик передаётся через конструктор и позволяет презентеру управлять логикой добавления/удаления товара из корзины
+**Методы класса:**
+- `set category(value: string): void` - устанавливает категорию товара и применяет соответствующий модификатор класса из `categoryMap`
+- `set image(src: string): void` - устанавливает изображение товара (добавляет `CDN_URL` к пути)
+- `set description(value: string): void` - устанавливает описание товара
+- `set buttonText(value: string): void` - устанавливает текст кнопки
+- `set disabled(value: boolean): void` - блокирует/разблокирует кнопку
+- `set inBasket(value: boolean): void` - применяет класс `card__button_remove` к кнопке, если товар уже в корзине
+
+**События:**
+- При клике на кнопку действия генерируется событие `preview:click` (без данных, презентер получает товар через `catalog.getPreview()`)
 
 #### Класс BasketItem
 Класс для строки товара в корзине.
@@ -381,8 +387,12 @@ Presenter - презентер содержит основную логику п
 
 **Наследует:** `Card`
 
+**Поля класса:**
+- `protected indexElement: HTMLElement` - элемент для отображения порядкового номера товара
+- `private button: HTMLButtonElement` - кнопка удаления товара
+
 **Методы класса:**
-- `render(data: CardState): HTMLElement` - отображает строку товара в корзине
+- `set index(value: number): void` - устанавливает порядковый номер товара
 
 **Обработчики действий (BasketItemActions):**
 - `onRemove?: () => void` - вызывается при клике на кнопку удаления товара из корзины. Обработчик передаётся через конструктор и позволяет презентеру управлять логикой удаления
@@ -399,12 +409,10 @@ Presenter - презентер содержит основную логику п
 - `protected list: HTMLElement` - элемент списка товаров
 - `protected totalElement: HTMLElement` - элемент для отображения общей стоимости
 - `protected button: HTMLButtonElement` - кнопка оформления заказа
-- `protected emptyPlaceholder: HTMLElement` - элемент для отображения сообщения "Корзина пуста" (создается программно в конструкторе)
 
 **Методы класса:**
-- `set items(value: HTMLElement[]): void` - устанавливает список товаров (при пустом массиве показывает "Корзина пуста" и блокирует кнопку)
+- `set items(value: HTMLElement[]): void` - устанавливает список товаров (при пустом массиве список очищается и блокируется кнопка)
 - `set total(value: number): void` - устанавливает общую стоимость товаров (формат: "N синапсов")
-- `render(data?: Partial<BasketViewState>): HTMLElement` - обновляет содержимое корзины
 
 **События:**
 - При клике на кнопку "Оформить" генерируется событие `basket:checkout`
@@ -423,8 +431,8 @@ Presenter - презентер содержит основную логику п
 - `protected readonly events: IEvents` - брокер событий
 
 **Методы класса:**
-- `set valid(value: boolean | undefined): void` - активирует/деактивирует кнопку отправки в зависимости от валидности формы
-- `set errors(value: string | undefined): void` - отображает сообщения об ошибках валидации
+- `set valid(value: boolean): void` - активирует/деактивирует кнопку отправки в зависимости от валидности формы
+- `set errors(value: string): void` - отображает сообщения об ошибках валидации
 
 #### Класс OrderForm
 Класс для формы выбора способа оплаты и адреса доставки.
@@ -441,8 +449,8 @@ Presenter - презентер содержит основную логику п
 - `protected addressInput: HTMLInputElement` - поле ввода адреса доставки
 
 **Методы класса:**
-- `set payment(value: TPayment | null | undefined): void` - устанавливает выбранный способ оплаты (добавляет класс `button_alt-active`)
-- `set address(value: string | undefined): void` - устанавливает значение поля адреса
+- `set payment(value: TPayment | null): void` - устанавливает выбранный способ оплаты (добавляет класс `button_alt-active`)
+- `set address(value: string): void` - устанавливает значение поля адреса
 - `private setPayment(payment: TPayment): void` - внутренний метод для установки способа оплаты
 
 **События:**
@@ -465,8 +473,8 @@ Presenter - презентер содержит основную логику п
 - `protected phoneInput: HTMLInputElement` - поле ввода телефона
 
 **Методы класса:**
-- `set email(value: string | undefined): void` - устанавливает значение поля email
-- `set phone(value: string | undefined): void` - устанавливает значение поля телефона
+- `set email(value: string): void` - устанавливает значение поля email
+- `set phone(value: string): void` - устанавливает значение поля телефона
 
 **События:**
 - При вводе в поля email или телефон генерируется событие `order:contacts` с данными `{ email?: string, phone?: string }`
@@ -501,15 +509,13 @@ Presenter - презентер содержит основную логику п
 **Основные функции:**
 - `renderCatalog(products: IProduct[])` - отрисовка каталога товаров на главной странице
 - `renderPreview(product: IProduct)` - отрисовка детального просмотра товара в модальном окне
-- `renderBasket()` - обновление счетчика товаров в шапке
-- `renderBasketContent(): HTMLElement` - создает содержимое корзины для отображения в модальном окне (список товаров, общая стоимость)
 - `renderOrderForm()` - отрисовка формы первого шага оформления заказа
 - `renderContactsForm()` - отрисовка формы второго шага оформления заказа
-- `updateOrderFormValidation()` - обновляет только валидацию формы заказа без полной перерисовки (используется при вводе данных)
-- `updateContactsFormValidation()` - обновляет только валидацию формы контактов без полной перерисовки (используется при вводе данных)
 - `renderSuccess(total: number)` - отрисовка экрана успешного оформления заказа
 - `getValidationErrors(validationErrors: TBuyerErrors, fields?: (keyof IBuyer)[]): string[]` - вспомогательная функция для преобразования объекта ошибок валидации в массив строк
-- `isFormOpen(formSelector: string): boolean` - вспомогательная функция для проверки, открыта ли форма в модальном окне
+
+**Переменные:**
+- `activeForm: 'order' | 'contacts' | null` - отслеживает, какая форма открыта в модальном окне
 
 **Обработка событий:**
 - События моделей обрабатываются для обновления представлений при изменении данных
@@ -525,7 +531,7 @@ Presenter - презентер содержит основную логику п
 
 **События моделей данных:**
 - `catalog:changed` - генерируется при обновлении списка товаров в каталоге (данные: отсутствуют)
-- `catalog:preview` - генерируется при установке товара для предпросмотра (данные: `{ product: IProduct }`)
+- `catalog:preview` - генерируется при установке товара для предпросмотра (данные: отсутствуют, презентер запрашивает товар через `catalog.getPreview()`)
 - `basket:changed` - генерируется при любом изменении содержимого корзины (данные: отсутствуют)
 - `buyer:changed` - генерируется при изменении данных покупателя (данные: отсутствуют)
 

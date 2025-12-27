@@ -9,6 +9,7 @@ export class ProductCatalog {
     constructor(private readonly events?: IEvents) {}
 
     protected items: IProduct[] = [];
+    protected preview: IProduct | null = null;
 
     /**
      * Сохранить массив товаров в каталог
@@ -16,7 +17,7 @@ export class ProductCatalog {
      */
     setItems(items: IProduct[]): void {
         this.items = items;
-        this.events?.emit('catalog:changed', { items });
+        this.events?.emit('catalog:changed');
     }
 
     /**
@@ -28,20 +29,21 @@ export class ProductCatalog {
     }
 
     /**
-     * Найти товар по его идентификатору
-     * @param id - идентификатор товара
-     * @returns найденный товар или undefined
-     */
-    getProductById(id: string): IProduct | undefined {
-        return this.items.find(item => item.id === id);
-    }
-
-    /**
      * Установить товар для детального просмотра
      * @param product - товар для просмотра
      */
     setPreview(product: IProduct): void {
-        this.events?.emit('catalog:preview', { product });
+        this.preview = product;
+        // Презентер при необходимости запросит актуальные данные через getPreview()
+        this.events?.emit('catalog:preview');
+    }
+
+    /**
+     * Получить товар, выбранный для детального просмотра
+     * @returns товар для просмотра или null
+     */
+    getPreview(): IProduct | null {
+        return this.preview;
     }
 }
 

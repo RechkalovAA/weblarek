@@ -35,16 +35,14 @@ export class OrderForm extends Form<OrderFormState> {
         });
     }
 
-    set payment(value: TPayment | null | undefined) {
+    set payment(value: TPayment | null) {
         Object.entries(this.buttons).forEach(([key, button]) => {
             button.classList.toggle('button_alt-active', value === key);
         });
     }
 
-    set address(value: string | undefined) {
-        if (value !== undefined) {
+    set address(value: string) {
             this.addressInput.value = value;
-        }
     }
 
     private setPayment(payment: TPayment) {

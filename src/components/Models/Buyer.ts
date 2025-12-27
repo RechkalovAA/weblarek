@@ -34,7 +34,7 @@ export class Buyer {
                 this.phone = value as string;
                 break;
         }
-        this.events?.emit('buyer:changed', { data: this.getData() });
+        this.events?.emit('buyer:changed');
     }
 
     /**
@@ -58,7 +58,7 @@ export class Buyer {
         this.address = '';
         this.email = '';
         this.phone = '';
-        this.events?.emit('buyer:changed', { data: this.getData() });
+        this.events?.emit('buyer:changed');
     }
 
     /**

@@ -28,16 +28,12 @@ export class ContactsForm extends Form<ContactsFormState> {
         });
     }
 
-    set email(value: string | undefined) {
-        if (value !== undefined) {
+    set email(value: string) {
             this.emailInput.value = value;
-        }
     }
 
-    set phone(value: string | undefined) {
-        if (value !== undefined) {
+    set phone(value: string) {
             this.phoneInput.value = value;
-        }
     }
 }
 

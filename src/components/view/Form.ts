@@ -21,16 +21,12 @@ export abstract class Form<T extends FormState> extends Component<T> {
         });
     }
 
-    set valid(value: boolean | undefined) {
-        if (value !== undefined) {
+    set valid(value: boolean) {
             this.submitButton.disabled = !value;
-        }
     }
 
-    set errors(value: string | undefined) {
-        if (value !== undefined) {
+    set errors(value: string) {
             this.errorsElement.textContent = value;
-        }
     }
 }
 
