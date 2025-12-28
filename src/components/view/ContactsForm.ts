@@ -17,14 +17,21 @@ export class ContactsForm extends Form<ContactsFormState> {
         this.phoneInput = ensureElement<HTMLInputElement>('input[name="phone"]', this.container);
 
         this.emailInput.addEventListener('input', () => {
-            this.events.emit('order:contacts', { email: this.emailInput.value, phone: this.phoneInput.value });
+            this.emitContactsChange();
         });
         this.phoneInput.addEventListener('input', () => {
-            this.events.emit('order:contacts', { email: this.emailInput.value, phone: this.phoneInput.value });
+            this.emitContactsChange();
         });
 
         this.container.addEventListener('submit', () => {
             this.events.emit('order:submit');
+        });
+    }
+
+    private emitContactsChange(): void {
+        this.events.emit('order:contacts', { 
+            email: this.emailInput.value, 
+            phone: this.phoneInput.value 
         });
     }
 

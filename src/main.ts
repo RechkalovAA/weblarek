@@ -93,14 +93,10 @@ function renderPreview(product: IProduct) {
             : 'Купить';
     
     const cardNode = previewCard.render({
-        title: product.title,
-        price: product.price,
-        ...(product.category && { category: product.category }),
-        ...(product.image && { image: product.image }),
-        ...(product.description && { description: product.description }),
-        ...(inBasket !== undefined && { inBasket }),
-        ...(buttonText && { buttonText }),
-        ...(unavailable !== undefined && { disabled: unavailable }),
+        ...product,
+        inBasket,
+        buttonText,
+        disabled: unavailable
     });
     modal.render({ content: cardNode, open: true });
 }
